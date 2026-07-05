@@ -17,6 +17,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import InterviewRoom from './pages/InterviewRoom';
+import McqRoom from './pages/McqRoom';
 import ResumeReview from './pages/ResumeReview';
 import CoachChat from './pages/CoachChat';
 import HistoryPage from './pages/History';
@@ -62,6 +63,15 @@ function SidebarLayout({ user, onLogout, children }) {
               >
                 <Mic size={20} />
                 <span>Mock Interview</span>
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/mcq" 
+                className={`nav-item ${location.pathname === '/mcq' ? 'active' : ''}`}
+              >
+                <FileText size={20} />
+                <span>MCQ Test</span>
               </Link>
             </li>
             <li>
@@ -218,6 +228,19 @@ export default function App() {
             user ? (
               <SidebarLayout user={user} onLogout={handleLogout}>
                 <InterviewRoom />
+              </SidebarLayout>
+            ) : (
+              <Navigate to="/login" />
+            )
+          } 
+        />
+
+        <Route 
+          path="/mcq" 
+          element={
+            user ? (
+              <SidebarLayout user={user} onLogout={handleLogout}>
+                <McqRoom />
               </SidebarLayout>
             ) : (
               <Navigate to="/login" />

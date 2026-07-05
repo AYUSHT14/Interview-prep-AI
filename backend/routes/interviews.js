@@ -271,4 +271,144 @@ router.post('/coach-chat', auth, async (req, res) => {
   }
 });
 
+// @route   POST api/interviews/mcq
+// @desc    Start a new MCQ session and get the first question
+// @access  Private
+router.post('/mcq', auth, async (req, res) => {
+  const { role, type, difficulty } = req.body;
+  const clientApiKey = readClientApiKey(req);
+
+  if (!role || !type || !difficulty) {
+    return res.status(400).json({ message: 'Please specify role, type, and difficulty.' });
+  }
+
+  try {
+    const aiQuestion = await GeminiService.generateMcqQuestion(role, type, difficulty, [], clientApiKey);
+
+    const newInterview = await InterviewModel.create({
+      userId: req.user.id,
+      role,
+      type,
+      format: 'mcq',
+      difficulty,
+      status: 'active',
+      questions: [{
+        questionText: aiQuestion.questionText,
+        options: aiQuestion.options,
+        correctAnswer: aiQuestion.correctAnswer,
+        userAnswer: '',
+        feedback: {
+          betterAnswer: aiQuestion.explanation
+        }
+      }],
+      overallScore: 0,
+      overallFeedback: ''
+    });
+
+    res.status(201).json(newInterview);
+  } catch (err) {
+    console.error('Error starting MCQ session:', err.message);
+    res.status(500).json({ message: 'Server error starting MCQ session' });
+  }
+});
+
+// @route   POST api/interviews/:id/mcq-answer
+// @desc    Submit MCQ answer and get next question
+// @access  Private
+router.post('/:id/mcq-answer', auth, async (req, res) => {
+  const { answer } = req.body;
+  const interviewId = req.params.id;
+
+  if (answer === undefined || answer === null) {
+    return res.status(400).json({ message: 'Answer is required' });
+  }
+
+  try {
+    const interview = await InterviewModel.findById(interviewId);
+    
+    if (!interview || interview.userId !== req.user.id) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+    if (interview.status !== 'active') {
+      return res.status(400).json({ message: 'Session completed' });
+    }
+
+    const currentQuestions = interview.questions || [];
+    const activeQuestionIndex = currentQuestions.findIndex(q => !q.userAnswer);
+    if (activeQuestionIndex === -1) {
+      return res.status(400).json({ message: 'No active question' });
+    }
+
+    const currentQuestion = currentQuestions[activeQuestionIndex];
+    const clientApiKey = readClientApiKey(req);
+
+    // Evaluate
+    const isCorrect = answer === currentQuestion.correctAnswer;
+    currentQuestion.userAnswer = answer;
+    
+    if (!currentQuestion.feedback) {
+      currentQuestion.feedback = {};
+    }
+    currentQuestion.feedback.score = isCorrect ? 100 : 0;
+    currentQuestion.feedback.comments = isCorrect ? 'Correct!' : 'Incorrect.';
+    
+    const questionsCount = currentQuestions.length;
+    // Let's set max questions to 10 for MCQ
+    const MAX_MCQ_QUESTIONS = 10;
+    let nextStep = {};
+
+    if (questionsCount >= MAX_MCQ_QUESTIONS) {
+      interview.status = 'completed';
+      
+      const score = Math.round(
+        currentQuestions.reduce((acc, q) => acc + (q.feedback?.score || 0), 0) / currentQuestions.length
+      );
+      
+      interview.overallScore = score;
+      interview.overallFeedback = `### MCQ Test Completed\nYou scored ${score}/100. Review your correct and incorrect answers in the history tab.`;
+      
+      nextStep = {
+        status: 'completed',
+        feedback: currentQuestion.feedback,
+        overallScore: interview.overallScore,
+        overallFeedback: interview.overallFeedback
+      };
+    } else {
+      const pastQuestions = currentQuestions.map(q => q.questionText);
+      const nextAiQuestion = await GeminiService.generateMcqQuestion(
+        interview.role,
+        interview.type,
+        interview.difficulty,
+        pastQuestions,
+        clientApiKey
+      );
+
+      currentQuestions.push({
+        questionText: nextAiQuestion.questionText,
+        options: nextAiQuestion.options,
+        correctAnswer: nextAiQuestion.correctAnswer,
+        userAnswer: '',
+        feedback: {
+          betterAnswer: nextAiQuestion.explanation
+        }
+      });
+
+      nextStep = {
+        status: 'active',
+        feedback: currentQuestion.feedback,
+        nextQuestion: nextAiQuestion.questionText
+      };
+    }
+
+    interview.questions = currentQuestions;
+    await InterviewModel.findByIdAndUpdate(interviewId, interview);
+
+    const updatedInterview = await InterviewModel.findById(interviewId);
+    res.json({ ...nextStep, interview: updatedInterview });
+  } catch (err) {
+    console.error('Error submitting MCQ answer:', err.message);
+    res.status(500).json({ message: 'Server error processing answer' });
+  }
+});
+
 module.exports = router;

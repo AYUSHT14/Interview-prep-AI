@@ -12,7 +12,8 @@ import {
   Code,
   Layout,
   Layers,
-  Users
+  Users,
+  FileText
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -212,10 +213,16 @@ export default function Dashboard({ user }) {
             Review your mock history and start polishing your skills.
           </p>
         </div>
-        <Link to="/interview" className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Plus size={18} />
-          <span>New Mock Session</span>
-        </Link>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <Link to="/mcq" className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <FileText size={18} />
+            <span>New MCQ Test</span>
+          </Link>
+          <Link to="/interview" className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Plus size={18} />
+            <span>New Mock Session</span>
+          </Link>
+        </div>
       </div>
 
       {/* Metrics Row */}

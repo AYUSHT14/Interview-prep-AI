@@ -228,6 +228,96 @@ Respond ONLY with a valid JSON object in this format:
   },
 
   /**
+   * Generates the next MCQ question in a session
+   */
+  generateMcqQuestion: async (role, type, difficulty, pastQuestions = [], clientApiKey = null) => {
+    const formattedType = type.toLowerCase().replace(' ', '_');
+    const formattedRole = role.toLowerCase();
+
+    // Determine category key
+    let category = 'behavioral';
+    if (formattedType.includes('tech') || formattedRole.includes('engineer') || formattedRole.includes('develop')) {
+      category = formattedRole.includes('front') ? 'frontend' : 'backend';
+    }
+    if (formattedType.includes('system')) {
+      category = 'system_design';
+    }
+    if (formattedType.includes('behavior')) {
+      category = 'behavioral';
+    }
+
+    const diff = ['easy', 'medium', 'hard'].includes(difficulty.toLowerCase()) ? difficulty.toLowerCase() : 'medium';
+    const apiKey = getGrokApiKey(clientApiKey);
+
+    // 1. Fallback / Mock AI Mode
+    if (!apiKey) {
+      const pool = MOCK_QUESTION_POOL[category]?.[diff] || MOCK_QUESTION_POOL.behavioral.medium;
+      const available = pool.filter(q => !pastQuestions.includes(q));
+      const chosenPool = available.length > 0 ? available : pool;
+      const questionText = chosenPool[Math.floor(Math.random() * chosenPool.length)];
+      return { 
+        questionText,
+        options: [
+          "This is a plausible incorrect option related to the question.",
+          "This is another distractor option.",
+          "This is the correct mock answer representing the core concept.",
+          "This is a completely wrong mock option."
+        ],
+        correctAnswer: "This is the correct mock answer representing the core concept.",
+        explanation: GrokService.getMockModelAnswer(questionText)
+      };
+    }
+
+    // 2. Real Grok Mode
+    try {
+      const messages = [
+        {
+          role: 'system',
+          content: 'You are a professional technical recruiter and interviewer. Generate multiple choice interview questions in JSON format.'
+        },
+        {
+          role: 'user',
+          content: `The candidate is taking a Multiple Choice Question (MCQ) test for:
+- Job Role: ${role}
+- Interview Category: ${type}
+- Difficulty Level: ${difficulty}
+
+Previous questions asked in this session (do not repeat or ask similar questions):
+${pastQuestions.map((q, idx) => `- ${q}`).join('\n') || 'None'}
+
+Generate the next highly relevant MCQ for this candidate.
+Respond ONLY with a valid JSON object in this format:
+{
+  "questionText": "your single multiple choice question here",
+  "options": [
+    "Option 1 text",
+    "Option 2 text",
+    "Option 3 text",
+    "Option 4 text"
+  ],
+  "correctAnswer": "The exact text of the correct option from the options array",
+  "explanation": "A brief explanation of why this is the correct answer"
+}`
+        }
+      ];
+
+      const responseText = await callGrokAPI(apiKey, messages, true);
+      const parsed = JSON.parse(cleanJSONResponse(responseText));
+      return parsed;
+    } catch (error) {
+      console.error('Error generating MCQ from Grok:', error.message);
+      const pool = MOCK_QUESTION_POOL[category]?.[diff] || MOCK_QUESTION_POOL.behavioral.medium;
+      const q = pool[Math.floor(Math.random() * pool.length)];
+      return { 
+        questionText: q,
+        options: ["Option A", "Option B", "Correct Option", "Option D"],
+        correctAnswer: "Correct Option",
+        explanation: "Fallback explanation due to API error."
+      };
+    }
+  },
+
+  /**
    * Helper to fetch tailored mock model answers
    */
   getMockModelAnswer: (question) => {
