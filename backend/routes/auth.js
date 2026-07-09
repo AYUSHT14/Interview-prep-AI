@@ -115,14 +115,18 @@ router.get('/me', auth, async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    // Omit password
-    const { password, ...userWithoutPassword } = user;
     
-    // Support file DB structure vs Mongoose doc details
+    // Convert Mongoose document to plain object, or use as is if fallback mode
+    const userObj = typeof user.toObject === 'function' ? user.toObject() : user;
+    
+    // Omit password
+    const { password, ...userWithoutPassword } = userObj;
+    
+    // Ensure both id and _id fields are populated correctly for the client
     const cleanUser = {
-      id: user._id,
-      name: user.name,
-      email: user.email,
+      id: userObj._id || userObj.id,
+      name: userObj.name,
+      email: userObj.email,
       ...userWithoutPassword
     };
     
