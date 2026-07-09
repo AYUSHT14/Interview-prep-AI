@@ -34,19 +34,14 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Internal Server Error' });
 });
 
-const PORT = process.env.PORT || 5000;
+connectDB();
 
-const startServer = async () => {
-  try {
-    await connectDB();
-    app.listen(PORT, () => {
-      console.log(`🚀 Server started on port ${PORT}`);
-      console.log(`📡 Health endpoint: http://localhost:${PORT}/api/health`);
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error.message);
-    process.exit(1);
-  }
-};
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server started on port ${PORT}`);
+    console.log(`📡 Health endpoint: http://localhost:${PORT}/api/health`);
+  });
+}
 
-startServer();
+module.exports = app;
