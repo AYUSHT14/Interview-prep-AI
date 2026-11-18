@@ -52,7 +52,7 @@ npm run dev
 
 ## 🌐 Deployment
 
-Deploy the app as one Render web service. Express serves the built React app and API from the same origin, so the browser does not need a separate API URL.
+Deploy the app as one Render web service. Express serves the built React app and API from the same origin, so the browser does not need a separate API URL. The Blueprint uses Render's free service plan, which spins down after 15 minutes without traffic and can take about a minute to wake up; use a paid plan for a production service with consistent availability.
 
 1. Push this repository to GitHub and create a Render Blueprint using `render.yaml`.
 2. Set `MONGODB_URI` to a persistent MongoDB Atlas connection string and `GROK_API_KEY` to a Groq or xAI key in the Render dashboard. Render generates `JWT_SECRET` from the Blueprint.

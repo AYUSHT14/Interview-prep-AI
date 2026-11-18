@@ -2,6 +2,7 @@ services:
   - type: web
     name: interview-prep-app
     runtime: node
+    plan: free
     buildCommand: npm install --prefix backend --omit=dev && npm install --prefix frontend && npm run build --prefix frontend
     startCommand: npm start --prefix backend
     healthCheckPath: /api/health
