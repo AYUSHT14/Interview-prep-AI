@@ -26,17 +26,6 @@ function SidebarLayout({ user, onLogout, children }) {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Dynamic custom API key settings
-  const [showKeyInput, setShowKeyInput] = useState(false);
-  const [keyVal, setKeyVal] = useState(localStorage.getItem('grokKey') || '');
-  
-  const handleSaveKey = () => {
-    localStorage.setItem('grokKey', keyVal);
-    alert('Grok API Key saved! Live AI features are now active.');
-    setShowKeyInput(false);
-    window.location.reload();
-  };
-
   return (
     <div className="app-container">
       <aside className="sidebar">
@@ -144,6 +133,7 @@ export default function App() {
 
   useEffect(() => {
     const checkAuth = async () => {
+      localStorage.removeItem('grokKey');
       const token = localStorage.getItem('token');
       if (!token) {
         setLoading(false);

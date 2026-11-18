@@ -39,21 +39,6 @@ export default function InterviewRoom() {
   const [submitting, setSubmitting] = useState(false);
   const [lastFeedback, setLastFeedback] = useState(null);
 
-  // xAI API key activation state
-  const [apiKeyVal, setApiKeyVal] = useState(localStorage.getItem('grokKey') || '');
-  const [hasKey, setHasKey] = useState(!!localStorage.getItem('grokKey'));
-
-  const handleActivateKey = () => {
-    if (!apiKeyVal.trim()) {
-      alert('Please paste a valid xAI API key.');
-      return;
-    }
-    localStorage.setItem('grokKey', apiKeyVal.trim());
-    setHasKey(true);
-    alert('Grok API Key activated! Mock interviews are now powered by xAI Grok-2.');
-    window.location.reload();
-  };
-
   // Overall Results
   const [overallScore, setOverallScore] = useState(0);
   const [overallFeedback, setOverallFeedback] = useState('');
@@ -190,7 +175,7 @@ export default function InterviewRoom() {
       setStep('feedback');
     } catch (err) {
       console.error('Error submitting response:', err);
-      alert('Failed to submit response. Please try again.');
+      alert(err.response?.data?.message || 'Failed to submit response. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -213,7 +198,7 @@ export default function InterviewRoom() {
       setStep('feedback');
     } catch (err) {
       console.error('Error getting help:', err);
-      alert('Failed to contact AI Coach. Please try again.');
+      alert(err.response?.data?.message || 'Failed to contact AI Coach. Please try again.');
     } finally {
       setSubmitting(false);
     }

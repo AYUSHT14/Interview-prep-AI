@@ -14,21 +14,6 @@ export default function CoachChat() {
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef(null);
 
-  // xAI API key activation state
-  const [apiKeyVal, setApiKeyVal] = useState(localStorage.getItem('grokKey') || '');
-  const [hasKey, setHasKey] = useState(!!localStorage.getItem('grokKey'));
-
-  const handleActivateKey = () => {
-    if (!apiKeyVal.trim()) {
-      alert('Please paste a valid xAI API key.');
-      return;
-    }
-    localStorage.setItem('grokKey', apiKeyVal.trim());
-    setHasKey(true);
-    alert('Grok API Key activated! Chat is now connected to the live xAI Grok-2 model.');
-    window.location.reload();
-  };
-
   // Auto scroll to bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -75,7 +60,7 @@ export default function CoachChat() {
       console.error('Error in coach chat:', err);
       setMessages(prev => [...prev, {
         sender: 'coach',
-        text: "⚠️ System offline. I had trouble communicating with the Gemini AI service. Please verify your internet or try again.",
+        text: "⚠️ System offline. I had trouble communicating with the AI service. Please verify your internet or try again.",
         createdAt: new Date().toISOString()
       }]);
     } finally {

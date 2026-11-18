@@ -1,7 +1,9 @@
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
-const { connectDB } = require('./config/db');
+const { connectDB, isFallback } = require('./config/db');
 
 const app = express();
 
@@ -24,9 +26,23 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'online',
     timestamp: new Date().toISOString(),
-    database: 'mongodb'
+    database: isFallback() ? 'json-fallback' : 'mongodb'
   });
 });
+
+const frontendDistPath = path.join(__dirname, '../frontend/dist');
+if (process.env.NODE_ENV === 'production' && fs.existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/')) {
+      return next();
+    }
+
+    res.sendFile(path.join(frontendDistPath, 'index.html'), (err) => {
+      if (err) next(err);
+    });
+  });
+}
 
 // Root Route
 app.get('/', (req, res) => {

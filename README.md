@@ -52,8 +52,13 @@ npm run dev
 
 ## 🌐 Deployment
 
-- **Live Platform**: [PrepAI on Vercel](https://interview-prep-ai-jlae.vercel.app)
-- **Backend API**: [Railway](https://interview-prep-backend-production-e02f.up.railway.app)
+Deploy the app as one Render web service. Express serves the built React app and API from the same origin, so the browser does not need a separate API URL.
+
+1. Push this repository to GitHub and create a Render Blueprint using `render.yaml`.
+2. Set `MONGODB_URI` to a persistent MongoDB Atlas connection string and `GROK_API_KEY` to a Groq or xAI key in the Render dashboard. Render generates `JWT_SECRET` from the Blueprint.
+3. Deploy the service and share its Render URL.
+
+The JSON database fallback is for local development only. Render's local filesystem is ephemeral, so production signups and interview history require a working MongoDB connection.
 
 ## 📡 API Endpoints
 

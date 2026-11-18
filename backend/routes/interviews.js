@@ -7,25 +7,18 @@ const GeminiService = require('../services/grok');
 // MAX questions per mock interview session
 const MAX_QUESTIONS = 20;
 
-// Helper to read client-provided API key from multiple header names
-const readClientApiKey = (req) => {
-  return req.headers['x-gemini-api-key'] || req.headers['x-grok-api-key'] || req.headers['x-grok-api-key'.toLowerCase()];
-};
-
 // @route   POST api/interviews
 // @desc    Start a new mock interview session and get the first question
 // @access  Private
 router.post('/', auth, async (req, res) => {
   const { role, type, difficulty } = req.body;
-  const clientApiKey = readClientApiKey(req);
-
   if (!role || !type || !difficulty) {
     return res.status(400).json({ message: 'Please specify role, type, and difficulty.' });
   }
 
   try {
     // 1. Generate the first question
-    const aiQuestion = await GeminiService.generateQuestion(role, type, difficulty, [], clientApiKey);
+    const aiQuestion = await GeminiService.generateQuestion(role, type, difficulty);
     const questionText = aiQuestion.questionText || "Tell me about your experience with programming.";
 
     // 2. Create the interview session
@@ -85,22 +78,19 @@ router.post('/:id/answer', auth, async (req, res) => {
     }
 
     const currentQuestion = currentQuestions[activeQuestionIndex];
-    const clientApiKey = readClientApiKey(req);
-
     // 1. Evaluate the answer using Gemini
     const evaluation = await GeminiService.evaluateAnswer(
       interview.role,
       interview.type,
       interview.difficulty,
       currentQuestion.questionText,
-      answer,
-      clientApiKey
+      answer
     );
 
     // 2. Update the active question with the answer and AI feedback
     currentQuestion.userAnswer = answer;
     currentQuestion.feedback = {
-      score: evaluation.score || 70,
+      score: evaluation.score ?? 70,
       comments: evaluation.comments || 'No comments available.',
       betterAnswer: evaluation.betterAnswer || 'No model response available.'
     };
@@ -117,8 +107,7 @@ router.post('/:id/answer', auth, async (req, res) => {
         interview.role,
         interview.type,
         interview.difficulty,
-        currentQuestions,
-        clientApiKey
+        currentQuestions
       );
 
       interview.overallScore = overall.overallScore || 75;
@@ -137,8 +126,7 @@ router.post('/:id/answer', auth, async (req, res) => {
         interview.role,
         interview.type,
         interview.difficulty,
-        pastQuestions,
-        clientApiKey
+        pastQuestions
       );
 
       const nextQuestionText = nextAiQuestion.questionText || "Tell me about a time you solved a hard technical problem.";
@@ -171,7 +159,7 @@ router.post('/:id/answer', auth, async (req, res) => {
 
   } catch (err) {
     console.error('Error submitting answer:', err.message);
-    res.status(500).json({ message: 'Server error processing candidate answer' });
+    res.status(502).json({ message: 'AI evaluation is temporarily unavailable. Please try again.' });
   }
 });
 
@@ -243,8 +231,7 @@ router.post('/resume', auth, async (req, res) => {
   }
 
   try {
-    const clientApiKey = readClientApiKey(req);
-    const analysisResults = await GeminiService.analyzeResume(resumeText, clientApiKey);
+    const analysisResults = await GeminiService.analyzeResume(resumeText);
     res.json(analysisResults);
   } catch (err) {
     console.error('Error analyzing resume:', err.message);
@@ -262,8 +249,7 @@ router.post('/coach-chat', auth, async (req, res) => {
   }
 
   try {
-    const clientApiKey = req.headers['x-gemini-api-key'];
-    const replyResults = await GeminiService.chatWithCoach(message, chatHistory || [], clientApiKey);
+    const replyResults = await GeminiService.chatWithCoach(message, chatHistory || []);
     res.json(replyResults);
   } catch (err) {
     console.error('Error in coach chatbot route:', err.message);
@@ -276,14 +262,12 @@ router.post('/coach-chat', auth, async (req, res) => {
 // @access  Private
 router.post('/mcq', auth, async (req, res) => {
   const { role, type, difficulty } = req.body;
-  const clientApiKey = readClientApiKey(req);
-
   if (!role || !type || !difficulty) {
     return res.status(400).json({ message: 'Please specify role, type, and difficulty.' });
   }
 
   try {
-    const aiQuestion = await GeminiService.generateMcqQuestion(role, type, difficulty, [], clientApiKey);
+    const aiQuestion = await GeminiService.generateMcqQuestion(role, type, difficulty);
 
     const newInterview = await InterviewModel.create({
       userId: req.user.id,
@@ -340,8 +324,6 @@ router.post('/:id/mcq-answer', auth, async (req, res) => {
     }
 
     const currentQuestion = currentQuestions[activeQuestionIndex];
-    const clientApiKey = readClientApiKey(req);
-
     // Evaluate
     const isCorrect = answer === currentQuestion.correctAnswer;
     currentQuestion.userAnswer = answer;
@@ -379,8 +361,7 @@ router.post('/:id/mcq-answer', auth, async (req, res) => {
         interview.role,
         interview.type,
         interview.difficulty,
-        pastQuestions,
-        clientApiKey
+        pastQuestions
       );
 
       currentQuestions.push({
